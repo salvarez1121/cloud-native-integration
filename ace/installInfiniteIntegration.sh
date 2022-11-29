@@ -1,3 +1,3 @@
 #!/bin/bash
 
-oc apply -f resources/infiniteIntegrationServer.yaml
+oc apply -f $SCRIPT_DIR/resources/infiniteIntegrationServer.yaml

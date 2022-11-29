@@ -1,4 +1,4 @@
 #!/bin/bash
 
 #Deploy echo Integration Server
-oc apply -f resources/echoIntegrationServer.yaml
+oc apply -f $SCRIPT_DIR/resources/echoIntegrationServer.yaml

@@ -1,8 +1,8 @@
 #! /bin/bash
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 export TARGET_NAMESPACE=${1:-"cp4i"}
-export ROOTURL="$(oc get IngressController default -n openshift-ingress-operator -o jsonpath='{.status.domain}')"
 
-( echo "cat <<EOF" ; cat uniformcluster.yaml_template ; echo EOF ) | sh > uniformcluster.yaml
+( echo "cat <<EOF" ; cat $SCRIPT_DIR/uniformcluster.yaml_template ; echo EOF ) | sh > $SCRIPT_DIR/uniformcluster.yaml
 
-oc apply -f uniformcluster.yaml
+oc apply -f $SCRIPT_DIR/uniformcluster.yaml
