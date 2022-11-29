@@ -1,0 +1,60 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: uniformclusterqm3
+  namespace: $TARGET_NAMESPACE
+data:
+  qm.ini: |-
+    Variables:
+      INICONNAME=ucqm3-ibm-mq.$TARGET_NAMESPACE(1414)
+---
+apiVersion: mq.ibm.com/v1beta1
+kind: QueueManager
+metadata:
+  name: ucqm3
+  namespace: $TARGET_NAMESPACE
+spec:
+  version: 9.3.0.0-r1
+  license:
+    accept: true
+    license: L-RJON-CD3JKX
+    use: "NonProduction"
+  pki:
+    keys:
+    - name: default
+      secret:
+        secretName: uniformclustercert
+        items:
+          - tls.key
+          - tls.crt
+  web:
+    enabled: true
+  queueManager:
+    resources:
+      requests:
+        cpu: 100m
+      limits:
+        cpu: 500m
+    ini:
+      - configMap:
+          name: uniformcluster
+          items:
+            - allqms.ini
+      - configMap:
+          name: uniformclusterqm3
+          items:
+            - qm.ini
+    mqsc:
+      - configMap:
+          name: uniformcluster
+          items:
+            - uniformcluster.mqsc
+    availability:
+      type: NativeHA
+  template:
+    pod:
+      containers:
+        - env:
+            - name: MQSNOAUT
+              value: 'yes'
+          name: qmgr

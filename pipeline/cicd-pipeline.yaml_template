@@ -1,0 +1,170 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: infinite-base-pipeline
+spec:
+  params:
+    - name: imageTag
+      type: string
+      description: The image tag
+  workspaces:
+    - name: git-source
+  tasks:
+    - name: clone-git-source
+      retries: 2
+      taskRef:
+        name: git-clone
+        kind: ClusterTask
+      params:
+        - name: url
+          value: "$REPO"
+        - name: subdirectory
+          value: ""
+        - name: deleteExisting
+          value: "true"
+        - name: revision
+          value: "$BRANCH"
+      workspaces:
+        - name: output
+          workspace: git-source
+
+    - name: fixup-dockerfiles
+      retries: 2
+      runAfter:
+        - clone-git-source
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "products/bash/fixup-dockerfiles.sh"
+        - name: params
+          value: " -n $NAMESPACE"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+    # Deploy IBM MQ
+    - name: deploy-mq
+      retries: 2
+      runAfter:
+        - clone-git-source
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "mq/uniformcluster/deploy/install.sh"
+        - name: params
+          value: " $NAMESPACE"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+    # Wait for MQ to be ready
+    - name: wait-for-mq-1
+      retries: 2
+      runAfter:
+        - deploy-mq
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "mq/uniformcluster/deploy/checkIfStarted.sh"
+        - name: params
+          # For Dev deploy with tracing enabled and no HA
+          value: " $NAMESPACE $QMGR_NAME_1"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+    # Wait for MQ to be ready
+    - name: wait-for-mq-2
+      retries: 2
+      runAfter:
+        - deploy-mq
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "mq/uniformcluster/deploy/checkIfStarted.sh"
+        - name: params
+          # For Dev deploy with tracing enabled and no HA
+          value: " $NAMESPACE $QMGR_NAME_2"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+
+    # Deploy ACE config
+    - name: deploy-ace-config
+      retries: 2
+      runAfter:
+        - wait-for-mq-1
+        - wait-for-mq-2
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "ace/installACEConfig.sh"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+    # Deploy ACE Core Integration
+    - name: deploy-ace-core
+      retries: 2
+      runAfter:
+        - deploy-ace-config
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "ace/installCoreIntegration.sh"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+    - name: wait-ace-core
+      retries: 2
+      runAfter:
+        - deploy-ace-core
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "ace/checkIfStarted.sh"
+        - name: params
+          # For Dev deploy with tracing enabled and no HA
+          value: " $NAMESPACE echo"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+    # Deploy ACE Infinite Integration
+    - name: deploy-ace-infinite
+      retries: 2
+      runAfter:
+        - deploy-ace-config
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "ace/installInfiniteIntegration.sh"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+    - name: wait-ace-infinite
+      retries: 2
+      runAfter:
+        - deploy-ace-infinite
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "ace/checkIfStarted.sh"
+        - name: params
+          # For Dev deploy with tracing enabled and no HA
+          value: " $NAMESPACE infinite"
+      workspaces:
+        - name: git-source
+          workspace: git-source
