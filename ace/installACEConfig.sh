@@ -19,7 +19,7 @@ oc apply -f $SCRIPT_DIR/resources/credentialsForGitHub.yaml
 rm $SCRIPT_DIR/configuration
 
 # Create CCDT configuration
-( echo "cat <<EOF" ; cat resources/ccdt_template.json ; echo EOF ) | sh > ccdt.json
+( echo "cat <<EOF" ; cat $SCRIPT_DIR/resources/ccdt_template.json ; echo EOF ) | sh > $SCRIPT_DIR/ccdt.json
 zip $SCRIPT_DIR/configuration.zip $SCRIPT_DIR/ccdt.json
 mv $SCRIPT_DIR/configuration.zip $SCRIPT_DIR/configuration
 oc create secret generic mq-infinite-ccdt --from-file=$SCRIPT_DIR/configuration
