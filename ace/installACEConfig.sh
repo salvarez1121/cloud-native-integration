@@ -20,6 +20,7 @@ rm $SCRIPT_DIR/configuration
 
 # Create CCDT configuration
 ( echo "cat <<EOF" ; cat $SCRIPT_DIR/resources/ccdt_template.json ; echo EOF ) | sh > $SCRIPT_DIR/ccdt.json
+gzip -h
 zip $SCRIPT_DIR/configuration.zip $SCRIPT_DIR/ccdt.json
 mv $SCRIPT_DIR/configuration.zip $SCRIPT_DIR/configuration
 oc create secret generic mq-infinite-ccdt --from-file=$SCRIPT_DIR/configuration
