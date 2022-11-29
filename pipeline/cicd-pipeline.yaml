@@ -1,0 +1,232 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: infinite-base-pipeline
+  namespace: cp4i
+spec:
+  params:
+    - name: imageTag
+      type: string
+      description: The image tag
+  workspaces:
+    - name: git-source
+  tasks:
+    - name: clone-git-source
+      retries: 2
+      taskRef:
+        name: git-clone
+        kind: ClusterTask
+      params:
+        - name: url
+          value: "https://github.com/callumpjackson/cloud-native-integration.git"
+        - name: subdirectory
+          value: ""
+        - name: deleteExisting
+          value: "true"
+        - name: revision
+          value: "main"
+      workspaces:
+        - name: output
+          workspace: git-source
+
+    # Deploy IBM MQ
+    - name: deploy-mq
+      retries: 2
+      runAfter:
+        - clone-git-source
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "mq/uniformcluster/deploy/install.sh"
+        - name: params
+          value: " cp4i"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+    # Wait for MQ to be ready
+    - name: wait-for-mq-1
+      retries: 2
+      runAfter:
+        - deploy-mq
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "mq/uniformcluster/deploy/checkIfStarted.sh"
+        - name: params
+          value: " cp4i ucqm1"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+    # Wait for MQ to be ready
+    - name: wait-for-mq-2
+      retries: 2
+      runAfter:
+        - deploy-mq
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "mq/uniformcluster/deploy/checkIfStarted.sh"
+        - name: params
+          value: " cp4i ucqm2"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+
+    # Deploy ACE config
+    - name: deploy-ace-config
+      retries: 2
+      runAfter:
+        - wait-for-mq-1
+        - wait-for-mq-2
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "ace/installACEConfig.sh"
+        - name: params
+          value: " cp4i"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+    # Deploy ACE Core Integration
+    - name: deploy-ace-core
+      retries: 2
+      runAfter:
+        - deploy-ace-config
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "ace/installCoreIntegration.sh"
+        - name: params
+          value: " cp4i"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+    - name: wait-ace-core
+      retries: 2
+      runAfter:
+        - deploy-ace-core
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "ace/checkIfStarted.sh"
+        - name: params
+          value: " cp4i echo"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+    # Deploy ACE Infinite Integration
+    - name: deploy-ace-infinite
+      retries: 2
+      runAfter:
+        - deploy-ace-config
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "ace/installInfiniteIntegration.sh"
+        - name: params
+          value: " cp4i"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+    - name: wait-ace-infinite
+      retries: 2
+      runAfter:
+        - deploy-ace-infinite
+      taskRef:
+        name: run-script
+      params:
+        - name: script
+          value: "ace/checkIfStarted.sh"
+        - name: params
+          value: " cp4i infinite"
+      workspaces:
+        - name: git-source
+          workspace: git-source
+
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: run-script
+  namespace: cp4i
+spec:
+  params:
+    - name: script
+      type: string
+      description: The full path to the script relative to the git workspace
+    - name: params
+      type: string
+      description: The parameters to pass to the script when calling
+  workspaces:
+    - name: git-source
+  steps:
+    - name: oc
+      image: quay.io/openshift/origin-cli:latest
+      script: "/workspace/git-source/$(params.script) $(params.params)"
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: infinite-base-pipeline-triggertemplate
+  namespace: cp4i
+spec:
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: infinite-base-pipelinerun-$(uid)
+      spec:
+        pipelineRef:
+          name: infinite-base-pipeline
+        serviceAccountName: pipeline
+        workspaces:
+          - name: git-source
+            persistentvolumeclaim:
+              claimName: git-source-workspace
+        params:
+          - name: imageTag
+            value: $(uid)
+        timeout: "20m"
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: infinite-base-pipeline-event-listener
+  namespace: cp4i
+spec:
+  serviceAccountName: pipeline
+  triggers:
+    - template:
+        ref: infinite-base-pipeline-triggertemplate
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: EventListener
+    app.kubernetes.io/part-of: Triggers
+    eventlistener: infinite-base-pipeline-event-listener
+  name: el-infinite-base-pipeline-trigger-route
+  namespace: cp4i
+spec:
+  host: ""
+  port:
+    targetPort: http-listener
+  to:
+    kind: Service
+    name: el-infinite-base-pipeline-event-listener
+    weight: null
