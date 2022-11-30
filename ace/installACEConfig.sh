@@ -1,5 +1,7 @@
 #!/bin/bash
 
+yum -y install zip unzip
+
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # Import kdb and sth files for communication with IBM MQ
@@ -20,13 +22,11 @@ rm $SCRIPT_DIR/configuration
 
 # Create CCDT configuration
 ( echo "cat <<EOF" ; cat $SCRIPT_DIR/resources/ccdt_template.json ; echo EOF ) | sh > $SCRIPT_DIR/ccdt.json
-gzip $SCRIPT_DIR/ccdt.json
-#zip $SCRIPT_DIR/configuration.zip $SCRIPT_DIR/ccdt.json
-#mv $SCRIPT_DIR/configuration.zip $SCRIPT_DIR/configuration
-mv $SCRIPT_DIR/ccdt.json.gz $SCRIPT_DIR/configuration
+zip $SCRIPT_DIR/configuration.zip $SCRIPT_DIR/ccdt.json
+mv $SCRIPT_DIR/configuration.zip $SCRIPT_DIR/configuration
 oc create secret generic mq-infinite-ccdt --from-file=$SCRIPT_DIR/configuration
 oc apply -f $SCRIPT_DIR/resources/ccdt.yaml
-rm $SCRIPT_DIR/configuration
+rm $SCRIPT_DIR/configuration $SCRIPT_DIR/ccdt.json
 
 # Create MQ Policy Project
 export POLICY_PROJECT=`cat $SCRIPT_DIR/bars/InfiniteScalePolicyProject.bar | base64 -w10000`
