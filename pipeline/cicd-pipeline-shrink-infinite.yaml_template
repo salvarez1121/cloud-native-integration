@@ -44,21 +44,6 @@ spec:
       workspaces:
         - name: git-source
           workspace: git-source
-
-    - name: wait-ace-infinite
-      retries: 2
-      runAfter:
-        - shrink-ace-infinite
-      taskRef:
-        name: run-script
-      params:
-        - name: script
-          value: "ace/checkIfStarted.sh"
-        - name: params
-          value: " {{NAMESPACE}} infinite 4"
-      workspaces:
-        - name: git-source
-          workspace: git-source
 ---
 apiVersion: triggers.tekton.dev/v1alpha1
 kind: TriggerTemplate
