@@ -20,12 +20,13 @@ rm $SCRIPT_DIR/configuration
 
 # Create CCDT configuration
 ( echo "cat <<EOF" ; cat $SCRIPT_DIR/resources/ccdt_template.json ; echo EOF ) | sh > $SCRIPT_DIR/ccdt.json
-gzip -h
-zip $SCRIPT_DIR/configuration.zip $SCRIPT_DIR/ccdt.json
-mv $SCRIPT_DIR/configuration.zip $SCRIPT_DIR/configuration
+gzip $SCRIPT_DIR/ccdt.json
+#zip $SCRIPT_DIR/configuration.zip $SCRIPT_DIR/ccdt.json
+#mv $SCRIPT_DIR/configuration.zip $SCRIPT_DIR/configuration
+mv $SCRIPT_DIR/ccdt.json.gz $SCRIPT_DIR/configuration
 oc create secret generic mq-infinite-ccdt --from-file=$SCRIPT_DIR/configuration
 oc apply -f $SCRIPT_DIR/resources/ccdt.yaml
-rm $SCRIPT_DIR/configuration $SCRIPT_DIR/ccdt.json
+rm $SCRIPT_DIR/configuration
 
 # Create MQ Policy Project
 export POLICY_PROJECT=`cat $SCRIPT_DIR/bars/InfiniteScalePolicyProject.bar | base64 -w10000`
