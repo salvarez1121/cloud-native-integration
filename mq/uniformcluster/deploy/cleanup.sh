@@ -17,3 +17,5 @@ oc delete pvc data-ucqm2-ibm-mq-1 -n $TARGET_NAMESPACE
 oc delete pvc data-ucqm2-ibm-mq-2 -n $TARGET_NAMESPACE
 
 $SCRIPT_DIR/removeThird.sh
+
+exit 0
