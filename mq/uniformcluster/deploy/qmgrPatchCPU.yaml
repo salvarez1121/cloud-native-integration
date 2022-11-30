@@ -1,0 +1,5 @@
+spec:
+  queueManager:
+    resources:
+      limits:
+        cpu: 1

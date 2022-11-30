@@ -1,8 +1,8 @@
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
-  name: shrink-infinite-pipeline
-  namespace: cp4i
+  name: scale-cpu-mq-pipeline
+  namespace: {{NAMESPACE}}
 spec:
   params:
     - name: imageTag
@@ -18,19 +18,19 @@ spec:
         kind: ClusterTask
       params:
         - name: url
-          value: "https://github.com/callumpjackson/cloud-native-integration.git"
+          value: "{{REPO}}"
         - name: subdirectory
           value: ""
         - name: deleteExisting
           value: "true"
         - name: revision
-          value: "main"
+          value: "{{BRANCH}}"
       workspaces:
         - name: output
           workspace: git-source
 
-    # Infinite ACE Core
-    - name: shrink-ace-infinite
+    # Scale IBM MQ
+    - name: scale-cpu-mq
       retries: 2
       runAfter:
         - clone-git-source
@@ -38,9 +38,9 @@ spec:
         name: run-script
       params:
         - name: script
-          value: "ace/decrementServer.sh"
+          value: "mq/uniformcluster/deploy/scaleCPU.sh"
         - name: params
-          value: " cp4i infinite"
+          value: " {{NAMESPACE}}"
       workspaces:
         - name: git-source
           workspace: git-source
@@ -48,17 +48,17 @@ spec:
 apiVersion: triggers.tekton.dev/v1alpha1
 kind: TriggerTemplate
 metadata:
-  name: shrink-infinite-pipeline-triggertemplate
-  namespace: cp4i
+  name: scale-cpu-mq-pipeline-triggertemplate
+  namespace: {{NAMESPACE}}
 spec:
   resourcetemplates:
     - apiVersion: tekton.dev/v1beta1
       kind: PipelineRun
       metadata:
-        generateName: shrink-infinite-pipelinerun-$(uid)
+        generateName: scale-cpu-mq-pipelinerun-$(uid)
       spec:
         pipelineRef:
-          name: shrink-infinite-pipeline
+          name: scale-cpu-mq-pipeline
         serviceAccountName: pipeline
         workspaces:
           - name: git-source
@@ -72,13 +72,13 @@ spec:
 apiVersion: triggers.tekton.dev/v1alpha1
 kind: EventListener
 metadata:
-  name: shrink-infinite-pipeline-event-listener
-  namespace: cp4i
+  name: scale-cpu-mq-pipeline-event-listener
+  namespace: {{NAMESPACE}}
 spec:
   serviceAccountName: pipeline
   triggers:
     - template:
-        ref: shrink-infinite-pipeline-triggertemplate
+        ref: scale-cpu-mq-pipeline-triggertemplate
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
@@ -86,14 +86,14 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: EventListener
     app.kubernetes.io/part-of: Triggers
-    eventlistener: shrink-infinite-pipeline-event-listener
-  name: el-shrink-infinite-pipeline-trigger-route
-  namespace: cp4i
+    eventlistener: scale-cpu-mq-pipeline-event-listener
+  name: el-scale-cpu-mq-pipeline-trigger-route
+  namespace: {{NAMESPACE}}
 spec:
   host: ""
   port:
     targetPort: http-listener
   to:
     kind: Service
-    name: el-shrink-infinite-pipeline-event-listener
+    name: el-scale-cpu-mq-pipeline-event-listener
     weight: null

@@ -83,3 +83,11 @@ cat cicd-pipeline-shrink-mq.yaml_template |
        sed "s#{{QMGR_NAME_3}}#$QMGR_NAME_3#g;" > cicd-pipeline-shrink-mq.yaml
 
 oc apply -f cicd-pipeline-shrink-mq.yaml
+
+cat cicd-pipeline-scale-cpu-mq.yaml_template |
+       sed "s#{{REPO}}#$REPO#g;" |
+       sed "s#{{NAMESPACE}}#$TARGET_NAMESPACE#g;" |
+       sed "s#{{BRANCH}}#$BRANCH#g;" |
+       sed "s#{{QMGR_NAME_3}}#$QMGR_NAME_3#g;" > cicd-pipeline-scale-cpu-mq.yaml
+
+oc apply -f cicd-pipeline-scale-cpu-mq.yaml
