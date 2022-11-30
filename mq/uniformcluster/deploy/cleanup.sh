@@ -18,4 +18,6 @@ oc delete pvc data-ucqm2-ibm-mq-2 -n $TARGET_NAMESPACE
 
 $SCRIPT_DIR/removeThird.sh
 
+# Don't worry if the last command fails, some of the resources may have already
+# been deleted.
 exit 0

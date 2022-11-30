@@ -3,7 +3,7 @@
 yum -y install zip unzip
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-
+cd $SCRIPT_DIR
 # Import kdb and sth files for communication with IBM MQ
 rm $SCRIPT_DIR/configuration
 cp $SCRIPT_DIR/../mq/uniformcluster/test/key.kdb $SCRIPT_DIR/configuration
@@ -22,7 +22,7 @@ rm $SCRIPT_DIR/configuration
 
 # Create CCDT configuration
 ( echo "cat <<EOF" ; cat $SCRIPT_DIR/resources/ccdt_template.json ; echo EOF ) | sh > $SCRIPT_DIR/ccdt.json
-zip $SCRIPT_DIR/configuration.zip $SCRIPT_DIR/ccdt.json
+zip $SCRIPT_DIR/configuration.zip ccdt.json
 mv $SCRIPT_DIR/configuration.zip $SCRIPT_DIR/configuration
 oc create secret generic mq-infinite-ccdt --from-file=$SCRIPT_DIR/configuration
 oc apply -f $SCRIPT_DIR/resources/ccdt.yaml
