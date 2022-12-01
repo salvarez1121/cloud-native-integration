@@ -79,7 +79,7 @@ spec:
   queueManager:
     resources:
       requests:
-        cpu: 100m
+        cpu: 500m
       limits:
         cpu: 500m
     ini:
