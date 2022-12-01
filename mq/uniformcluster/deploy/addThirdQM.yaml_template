@@ -32,9 +32,9 @@ spec:
   queueManager:
     resources:
       requests:
-        cpu: 500m
+        cpu: 1
       limits:
-        cpu: 500m
+        cpu: 1
     ini:
       - configMap:
           name: uniformcluster
