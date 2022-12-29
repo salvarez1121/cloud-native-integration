@@ -10,7 +10,7 @@ spec:
   enableMetrics: true
   license:
     accept: true
-    license: L-APEH-CCHL5W
+    license: L-APEH-CFZE47
     use: CloudPakForIntegrationNonProduction
   pod:
     containers:
