@@ -10,7 +10,7 @@ spec:
   enableMetrics: true
   license:
     accept: true
-    license: L-APEH-CFZE47
+    license: L-APEH-CCHL5W
     use: CloudPakForIntegrationNonProduction
   pod:
     containers:
@@ -27,7 +27,7 @@ spec:
     timeout: 120s
   service:
     endpointType: http
-  version: '12.0-lts'
+  version: '12.0.5.0-r1-lts'
   barURL: >-
     https://raw.githubusercontent.com/callumpjackson/tempbarfiles/main/EchoAppproject.generated.bar
   configurations:
