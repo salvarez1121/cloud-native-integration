@@ -19,7 +19,8 @@ rm configuration
 # Create CCDT configuration
 export ROOTURL="$(oc get IngressController default -n openshift-ingress-operator -o jsonpath='{.status.domain}')"
 ( echo "cat <<EOF" ; cat resources/ccdt_template.json ; echo EOF ) | sh > ccdt.json
-zip configuration.zip ccdt.json
+
+python -m zipfile -c $SCRIPT_DIR/configuration.zip ccdt.json
 mv configuration.zip configuration
 oc create secret generic mq-infinite-ccdt --from-file=configuration
 oc apply -f resources/ccdt.yaml
