@@ -77,6 +77,8 @@ spec:
   web:
     enabled: false
   queueManager:
+    storage:
+      defaultClass: thin
     resources:
       requests:
         cpu: 500m
@@ -129,6 +131,8 @@ spec:
   web:
     enabled: false
   queueManager:
+    storage:
+      defaultClass: thin
     resources:
       requests:
         cpu: 100m
