@@ -78,7 +78,7 @@ spec:
     enabled: false
   queueManager:
     storage:
-      defaultClass: thin
+      defaultClass: ocs-storagecluster-ceph-rbd
     resources:
       requests:
         cpu: 500m
@@ -132,7 +132,7 @@ spec:
     enabled: false
   queueManager:
     storage:
-      defaultClass: thin
+      defaultClass: ocs-storagecluster-ceph-rbd
     resources:
       requests:
         cpu: 100m
