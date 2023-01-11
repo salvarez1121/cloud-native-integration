@@ -1,0 +1,153 @@
+package com.ibm.demo;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Stack;
+
+import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.SimpleFileServer;
+
+public class StartTests extends Thread
+{
+	static ArrayList<RunResults> list = new ArrayList<RunResults>();
+	public static final String BASE_URI = "http://localhost:8080/";
+	public static final String HOSTNAME = "apps.sa-cp4apps.ocp.csplab.local";
+	static SummaryOfResults currentSummary = null;
+	public static Stack threadPool = new Stack();
+	
+	public boolean doAPICall=true;
+	public static int callEveryXMills = 10;
+	
+	static
+	{
+		currentSummary = new SummaryOfResults();
+		currentSummary.setRequestsMade(1234);
+		currentSummary.setResponsesReceived(1234);
+		Map<String, Integer> queueManagerRequests = new HashMap<String, Integer>();
+		Map<String, Integer> queueManagerResponse = new HashMap<String, Integer>();
+		Map<String, Integer> integrationServers = new HashMap<String, Integer>();
+		Map<String, Integer> echoServers = new HashMap<String, Integer>();
+		
+		queueManagerRequests.put("qmgr1", Integer.valueOf("500"));
+		queueManagerRequests.put("qmgr2", Integer.valueOf("734"));
+		
+		queueManagerResponse.put("qmgr1", Integer.valueOf("600"));
+		queueManagerResponse.put("qmgr2", Integer.valueOf("634"));
+
+		integrationServers.put("is1", Integer.valueOf("400"));
+		integrationServers.put("is2", Integer.valueOf("834"));
+		
+		echoServers.put("echo1", Integer.valueOf("612"));
+		echoServers.put("echo2", Integer.valueOf("622"));
+		
+		currentSummary.setEchoServers(echoServers);
+		currentSummary.setQueueManagerRequests(queueManagerRequests);
+		currentSummary.setQueueManagerResponse(queueManagerResponse);
+		currentSummary.setIntegrationServers(integrationServers);
+	}
+	
+	
+	public static void main(String[] args) throws InterruptedException, IOException 
+	{
+		final HttpServer server = startServer();
+		System.out.println(String.format("Test Result API started", BASE_URI));
+
+		ManagementThread managementThread = new ManagementThread();
+		managementThread.start();
+
+		//Pre-load stack with 5 threads for API calls
+		for(int i =0; i<10; i++)
+		{
+			StartTests test = new StartTests();
+			test.doAPICall=true;
+			test.start();
+		}
+
+		Thread.sleep(5000);
+
+		while(true)
+		{
+			StartTests threadForTest = null;
+			synchronized(threadPool)
+			{
+				if(threadPool.empty())
+				{
+					System.out.println("#########################  Creating new Thread ######################");
+					StartTests test = new StartTests();
+					test.start();
+					threadPool.push(test);
+				}
+				threadForTest = (StartTests) threadPool.pop();
+			}
+			threadForTest.doAPICall = true;
+			threadForTest.interrupt();
+			Thread.sleep(callEveryXMills);
+		}
+	}
+
+	public void run()
+	{
+		while(true)
+		{
+			try
+			{
+				//long startTime = System.currentTimeMillis();
+				if(doAPICall)
+				{
+					doAPICall = false;
+					RunResults result = CallAPI.callAPI();
+					synchronized (list) 
+					{
+						list.add(result);
+					}
+					threadPool.push(this);
+					//long endTime = System.currentTimeMillis();
+					//System.out.println("Time for call: " + (endTime-startTime)+ "ms");
+				}
+				try
+				{
+					Thread.sleep(100);
+				}
+				catch (InterruptedException e)
+				{
+					// Thread to wake up. Do nothing
+				}
+				
+			}
+			catch(Exception e)
+			{
+				e.printStackTrace();
+			}
+
+		}
+	}
+	
+	   
+    public static HttpServer startServer() throws IOException {
+        
+    	InetSocketAddress socket = new InetSocketAddress(8000);
+    	HttpServer server = HttpServer.create(socket, 0);
+        server.createContext("/rest", new ProcessRESTRequest());
+        String currentPath = new java.io.File(".").getCanonicalPath();
+        System.out.println("Current dir:" + currentPath);
+        server.createContext("/file", SimpleFileServer.createFileHandler(Path.of(currentPath+File.separator+"docs")));
+        server.createContext("/scale-core", new InvokePipeline("scale-core"));
+        server.createContext("/scale-infinite", new InvokePipeline("scale-infinite"));
+        server.createContext("/shrink-core", new InvokePipeline("shrink-core"));
+        server.createContext("/shrink-infinite", new InvokePipeline("shrink-infinite"));
+
+        server.createContext("/scale-mq", new InvokePipeline("scale-mq"));
+        server.createContext("/scale-cpu-mq", new InvokePipeline("scale-cpu-mq"));
+        server.createContext("/shrink-mq", new InvokePipeline("shrink-mq"));
+        server.setExecutor(null); // creates a default executor
+        server.start();
+    	return server;
+    }
+}
